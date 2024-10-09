@@ -11,14 +11,12 @@ function osquery.list {
   local _table=
 
   # main
-
   ## read args
   while [[ ${1} != "" ]]; do
     case ${1} in
-      --filter_string | --fs )
+      --filter | --f )
         shift
         _filter_string=${1}
-        
       ;;
       --table | --t )
         shift
@@ -35,57 +33,83 @@ function osquery.list {
   
   ## select table
   case ${_table} in
-    file )
+    file | files )
       _filter=${true}
       _filter_type=path
       _type=file
 
       # check sanity
-
       if [[                         \
-          ${_filter} == ${true}  && \
+          ${_filter}             && \
           ! -z ${filter_type}    && \   
       ]]                            \
       then
         _sane=${true}
+      fi
+    ;;
+    listening_ports | listening_port )
+      _filter=${false}
+      _filter_type=
+      _table=listening_ports
 
-      else
+      # check sanity
+      if [[                         \
+          ! ${_filter}           && \
+          -z ${filter_type}      && \   
+      ]]                            \
+      then
+        _sane=${true}
+      fi
+    ;;
+    users | user )
+      _filter=${false}
+      _filter_type=
+      _table=user 
 
+      # check sanity
+      if [[                         \
+          ! ${_filter}           && \
+          -z ${filter_type}      && \   
+      ]]                            \
+      then
+        _sane=${true}
       fi
     ;;
     * )
-
+      _json_output="{}"
+      _sane=${false}
     ;;
 esac
 
 ## filter enabled
-if [[ ${filter == ${true} && ${_sane} ]]; then
-  _json_output=$( ${cmd_osqueryi} --json "select * from ${type} where ${_filter_type}=${_filter_string}" )
+if [[ ${_filter == ${true} && ${_sane} ]]; then
+  _json_output=$( ${cmd_osqueryi} --json "select * from ${_table} where ${_filter_type}=${_filter_string}" )
   ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
 
 ## filter disabled
-elif if [[ ${filter == ${false} && ${_sane} ]]; then
-  _json_output=$( ${cmd_osqueryi} --json "select * from ${type}" ) 
+elif if [[ ${_filter == ${false} && ${_sane} ]]; then
+  _json_output=$( ${cmd_osqueryi} --json "select * from ${_table}" ) 
 
+# validate json schema
 ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
 fi
 
 ## write status to json
 _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.exit_code |+= '${_exit_code})
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter})
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter} )
 
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string})
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type})
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path})
-
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.table |+= '${_table})
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.table |+= '${_table} )
 
 ## write output to json
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.data |+= '"${_json_output}")
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.data |+= '"${_json_output}" )
 
+# output json and exit
 ${cmd_echo} ${_json}
 exit ${_exit_code}
