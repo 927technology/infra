@@ -61,6 +61,48 @@ function osquery.list {
         _sane=${true}
       fi
     ;;
+    processes | process )
+      _filter=${false}
+      _filter_type=
+      _table=process 
+
+      # check sanity
+      if [[                         \
+          ! ${_filter}           && \
+          -z ${filter_type}      && \   
+      ]]                            \
+      then
+        _sane=${true}
+      fi
+    ;;
+    rpm_packages | rpm_package )
+      _filter=${false}
+      _filter_type=
+      _table=rpm_packages
+
+      # check sanity
+      if [[                         \
+          ! ${_filter}           && \
+          -z ${filter_type}      && \   
+      ]]                            \
+      then
+        _sane=${true}
+      fi
+    ;;
+    startup_items | startup_item )
+      _filter=${false}
+      _filter_type=
+      _table=user 
+
+      # check sanity
+      if [[                         \
+          ! ${_filter}           && \
+          -z ${filter_type}      && \   
+      ]]                            \
+      then
+        _sane=${true}
+      fi
+    ;;
     users | user )
       _filter=${false}
       _filter_type=
