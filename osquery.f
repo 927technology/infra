@@ -3,10 +3,10 @@ lfunction osquery.list {
   # variables
   local _filter=${false}
   local _filter_type=
+  local _filter_string=
   local _json="{}"
   local _json_output="{}"
   local _exit_code=${exit_crit}
-  local _path=
   local _sane=${false}
   local _table=
 
@@ -15,9 +15,9 @@ lfunction osquery.list {
   ## read args
   while [[ ${1} != "" ]]; do
     case ${1} in
-      --path | --p )
+      --filter_string | --fs )
         shift
-        _path=${1}
+        _filter_string=${1}
         
       ;;
       --table | --t )
@@ -58,30 +58,27 @@ lfunction osquery.list {
     ;;
 esac
 
-
-
-
 ## filter enabled
 if [[ ${filter == ${true} && ${_sane} ]]; then
-  _json_output=$(${cmd_osqueryi} --json "select * from ${type} where ${_filter_type}=${_path}")
+  _json_output=$( ${cmd_osqueryi} --json "select * from ${type} where ${_filter_type}=${_filter_string}" )
   ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
 
 ## filter disabled
 elif if [[ ${filter == ${false} && ${_sane} ]]; then
-  _json_output=$(${cmd_osqueryi} --json "select * from ${type}") 
+  _json_output=$( ${cmd_osqueryi} --json "select * from ${type}" ) 
 
 ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
 fi
 
-
-
-
 ## write status to json
 _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.exit_code |+= '${_exit_code})
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter |+= '${_filter})
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter})
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter_type |+= '${_filter_type})
+
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string})
+
+_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type})
 
 _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path})
 
