@@ -1,4 +1,4 @@
-lfunction osquery.list {
+function osquery.list {
 
   # variables
   local _filter=${false}
