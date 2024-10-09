@@ -6,7 +6,7 @@ function osquery.list {
   local _filter_string=
   local _json="{}"
   local _json_output="{}"
-  local _exit_code=${exit_crit}
+  local _exit_code=${exitcrit}
   local _sane=${false}
   local _table=
 
@@ -24,7 +24,7 @@ function osquery.list {
       ;; 
       * | -h | --help )
         ${cmd_echo} need help dialog
-        exit ${exit_crit}
+        exit ${exitcrit}
       ;;
     esac
 
@@ -41,7 +41,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ${_filter}             && \
-          ! -z ${filter_type}    && \   
+          ! -z ${_filter_type}   && \   
       ]]                            \
       then
         _sane=${true}
@@ -55,7 +55,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ! ${_filter}           && \
-          -z ${filter_type}      && \   
+          -z ${_filter_type}     && \   
       ]]                            \
       then
         _sane=${true}
@@ -69,7 +69,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ! ${_filter}           && \
-          -z ${filter_type}      && \   
+          -z ${_filter_type}     && \   
       ]]                            \
       then
         _sane=${true}
@@ -83,7 +83,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ! ${_filter}           && \
-          -z ${filter_type}      && \   
+          -z ${_filter_type}     && \   
       ]]                            \
       then
         _sane=${true}
@@ -97,7 +97,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ! ${_filter}           && \
-          -z ${filter_type}      && \   
+          -z ${_filter_type}     && \   
       ]]                            \
       then
         _sane=${true}
@@ -111,7 +111,7 @@ function osquery.list {
       # check sanity
       if [[                         \
           ! ${_filter}           && \
-          -z ${filter_type}      && \   
+          -z ${_filter_type}     && \   
       ]]                            \
       then
         _sane=${true}
@@ -126,14 +126,14 @@ esac
 ## filter enabled
 if [[ ${_filter == ${true} && ${_sane} ]]; then
   _json_output=$( ${cmd_osqueryi} --json "select * from ${_table} where ${_filter_type}=${_filter_string}" )
-  ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
+  ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exitok} || _json_output="{}"
 
 ## filter disabled
 elif if [[ ${_filter == ${false} && ${_sane} ]]; then
   _json_output=$( ${cmd_osqueryi} --json "select * from ${_table}" ) 
 
 # validate json schema
-${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exit_ok} || _json_output="{}"
+${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exitok} || _json_output="{}"
 fi
 
 ## write status to json
