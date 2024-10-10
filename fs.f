@@ -1,5 +1,10 @@
 function fs.ramdrv {
 
+  # dependencies
+  ## bools.v
+  ## cmd_*.v 
+  ## json.f 
+
   # variables 
   local _error_count=0
   local _exit_code=${exitcrit}
@@ -57,7 +62,7 @@ function fs.ramdrv {
   ## create mount point
   if [[ ! -d ${_mount} && ${_error_count} == 0 ]]; then 
     ${cmd_mkdir} ${mount} 2>&1 /dev/null 
-    if [[ ${?} ]]: then
+    if [[ ${?} == ${exitok} ]]: then
       _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.ramfs.mkdir |+= '${true})
     else
       $(( _error_count++ ))
@@ -67,7 +72,7 @@ function fs.ramdrv {
 
     ## set permissions
     ${cmd_chown} ${_uid}:${_gid} ${_mount} 2>&1 /dev/null
-    if [[ ${?} ]]: then
+    if [[ ${?} == ${exitok} ]]: then
       _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.ramfs.chown |+= '${true})
     else
       $(( _error_count++ ))
@@ -77,7 +82,7 @@ function fs.ramdrv {
 
     ## mount
     ${cmd_mount} -t ramfs -o size=1g  ramfsmount ${_mount} 2>&1 /dev/null
-if [[ ${?} ]]: then
+    if [[ ${?} == ${exitok} ]]; then
       _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.ramfs.mount |+= '${true})
     else
       $(( _error_count++ ))
@@ -87,13 +92,17 @@ if [[ ${?} ]]: then
   fi
 
   ## validate json
-  $( ${cmd_echo} ${}  )
+  if [[ ! $( json.validate ${_json} ) == ${exitok} ]]; then
+    $(( _error_count++ ))
+    _json="{}"
+  fi
 
   ## set exit code
   [[ ${_error_count} == 0 ]] && _exit_code=${exitok}
 
   ## exit
-  ${cmd_echo} ${_json}
+  ${cmd_echo} ${_json} | ${cmd_jq} -c
+  exit ${_exit_code}
 
   
-}
+} 
