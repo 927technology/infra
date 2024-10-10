@@ -1,10 +1,13 @@
 function fs.ramdrv {
 
   # variables 
-  local _gid=
+  local _error_count=0
+  local _exit_code=${exitcrit}
+  local _gid=${cmd_whoami}
+  local _json="{}"
   local _mount=
   local _sane=${false}
-  local _uid=
+  local _uid=${cmd_whoami}
 
   # main
   ## parse args
@@ -28,13 +31,31 @@ function fs.ramdrv {
   esac
 
   ## validate 
-  [[ -z ${_gid} ]] && _gid=${cmd_whoami}
-  [[ -z ${_uid} ]] && _gid=${cmd_whoami}
-  [[ -z ${_mount} ]] && _gid=${cmd_whoami}
+  [[ -z ${_gid} ]]   && $(( _error_count++ ))
+  [[ -z ${_uid} ]]   && $(( _error_count++ ))
+  [[ -z ${_mount} ]] && $(( _error_count++ ))
 
   ## create mount point
-  [[ ! -d ${_mount} ]] && ${cmd_mkdir} ${mount}
+  if [[ ! -d ${_mount} && ${_error_count} == 0 ]]; then 
+    ${cmd_mkdir} ${mount} 2>&1 /dev/null 
+    if [[ ${?} ]]: then
+      $(( _error_count++ ))
 
-  ${cmd_chown} ${_uid}:${_gid} ${_mount}
-  ${cmd_mount} -t ramfs -o size=1g ramfsmount ${_mount}
+
+
+
+
+
+
+
+
+    ${cmd_chown} ${_uid}:${_gid} ${_mount} 2>&1 /dev/null || $(( _error_count++ ))  
+
+    ${cmd_mount} -t ramfs -o size=1g  ramfsmount ${_mount} 2>&1 /dev/null || $(( _error_count++ ))
+
+  fi
+
+  [[ ${_error_count} == 0 ]] && _exit_code=${exitok}
+
+  
 }
