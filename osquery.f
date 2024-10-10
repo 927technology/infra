@@ -1,6 +1,9 @@
 function osquery.list {
+  # dependencies 
+  ## json.f
 
   # variables
+  local _error_count=0
   local _filter=${false}
   local _filter_type=
   local _filter_string=
@@ -123,8 +126,8 @@ function osquery.list {
     ;;
 esac
 
-## filter enabled
-if [[ ${_filter == ${true} && ${_sane} ]]; then
+  ## filter enabled
+  if [[ ${_filter == ${true} && ${_sane} ]]; then
   _json_output=$( ${cmd_osqueryi} --json "select * from ${_table} where ${_filter_type}=${_filter_string}" )
   ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exitok} || _json_output="{}"
 
@@ -133,25 +136,30 @@ elif if [[ ${_filter == ${false} && ${_sane} ]]; then
   _json_output=$( ${cmd_osqueryi} --json "select * from ${_table}" ) 
 
 # validate json schema
-${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exitok} || _json_output="{}"
+$( json.validate ${_json_output} ) && $(( _error_count++ )) || _json_output="{}"
 fi
 
-## write status to json
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.exit_code |+= '${_exit_code})
+  ## write status to json
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.exit_code |+= '${_exit_code})
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter} )
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string} )
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type} )
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path} )
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path} )
 
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.table |+= '${_table} )
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.table |+= '${_table} )
 
-## write output to json
-_json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.data |+= '"${_json_output}" )
+  ## write output to json
+  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.data |+= '"${_json_output}" )
 
-# output json and exit
-${cmd_echo} ${_json}
-exit ${_exit_code}
+  $( json.validate ${_json} ) && $(( _error_count++ ))  || _json="{}"
+fi
+
+  # det exit code
+  [[ ${_error_count} == 0 ]] && exit_code = ${exitok}
+  # output json and exit
+  ${cmd_echo} ${_json}
+  exit ${_exit_code}
