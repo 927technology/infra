@@ -44,7 +44,7 @@ function fs.ramdrv {
   fi
 
 
-  if [[ -z ${_uid} ]]; then
+  if [[ ! -z ${_uid} ]]; then
     _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.validate.uid |+= '${true})
   else
     $(( _error_count++ ))
@@ -52,7 +52,7 @@ function fs.ramdrv {
   fi
 
 
-  if [[ -z ${_mount} ]]; then
+  if [[ ! -z ${_mount} ]]; then
     _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.validate.mount |+= '${true})
   else
     $(( _error_count++ ))
