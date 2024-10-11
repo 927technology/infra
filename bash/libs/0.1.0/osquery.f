@@ -4,13 +4,11 @@ function osquery.list {
 
   # variables
   local _error_count=0
-  local _filter=${false}
-  local _filter_type=
-  local _filter_string=
   local _json="{}"
   local _json_output="{}"
   local _exit_code=${exitcrit}
-  local _sane=${false}
+  local _path=
+  local _query=
   local _table=
 
   # main
@@ -21,10 +19,15 @@ function osquery.list {
         shift
         _filter_string=${1}
       ;;
+      --path | --0 )
+        shift
+        _path=${1}
+        [[ ! -d ${path} ]] && _path=
+      ;; 
       --table | --t )
         shift
-        _table=$(text.lcase ${1})
-      ;; 
+        _table=${1}
+      ;;
       * | -h | --help )
         ${cmd_echo} need help dialog
         exit ${exitcrit}
@@ -36,117 +39,48 @@ function osquery.list {
   
   ## select table
   case ${_table} in
-    file | files )
-      _filter=${true}
-      _filter_type=path
-      _type=file
+    disk_usage )
+      _query="SELECT path, type, ROUND((blocks_available * blocks_size * 10e-10), 2) AS free_gb, ROUND ((blocks_available * 1.0 / blocks * 1.0) * 100, 2) AS free_perc FROM mounts;"
 
-      # check sanity
-      if [[                         \
-          ${_filter}             && \
-          ! -z ${_filter_type}   && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+    ;;
+    file | files )
+      _query="select * from files where path=${_path};"
     ;;
     listening_ports | listening_port )
-      _filter=${false}
-      _filter_type=
-      _table=listening_ports
-
-      # check sanity
-      if [[                         \
-          ! ${_filter}           && \
-          -z ${_filter_type}     && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+      _query="select * from listening_ports:"
     ;;
     processes | process )
-      _filter=${false}
-      _filter_type=
-      _table=process 
-
-      # check sanity
-      if [[                         \
-          ! ${_filter}           && \
-          -z ${_filter_type}     && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+      _query="select * from processes;"
     ;;
-    rpm_packages | rpm_package )
-      _filter=${false}
-      _filter_type=
-      _table=rpm_packages
-
-      # check sanity
-      if [[                         \
-          ! ${_filter}           && \
-          -z ${_filter_type}     && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+    rpm_packages | rpm_package)
+      _query="select * from rpm_packages;"
     ;;
     startup_items | startup_item )
-      _filter=${false}
-      _filter_type=
-      _table=user 
-
-      # check sanity
-      if [[                         \
-          ! ${_filter}           && \
-          -z ${_filter_type}     && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+      _query="select * from startup_items;"
     ;;
     users | user )
-      _filter=${false}
-      _filter_type=
-      _table=user 
-
-      # check sanity
-      if [[                         \
-          ! ${_filter}           && \
-          -z ${_filter_type}     && \   
-      ]]                            \
-      then
-        _sane=${true}
-      fi
+      _query="select * from users;"
     ;;
     * )
-      _json_output="{}"
-      _sane=${false}
+      _query=
     ;;
 esac
 
-  ## filter enabled
-  if [[ ${_filter == ${true} && ${_sane} ]]; then
-  _json_output=$( ${cmd_osqueryi} --json "select * from ${_table} where ${_filter_type}=${_filter_string}" )
-  ${cmd_jq} ${_json_output} 2&>1 /dev/null   && _exit_code=${exitok} || _json_output="{}"
+  ## get output
+  if [[ ! -z ${_query}]]: then
+    _json_output=$( ${cmd_osqueryi} --json "#{_query}" )
+  else
+    _json_output="{}"
+  fi
+ 
 
-## filter disabled
-elif if [[ ${_filter == ${false} && ${_sane} ]]; then
-  _json_output=$( ${cmd_osqueryi} --json "select * from ${_table}" ) 
-
-# validate json schema
-$( json.validate ${_json_output} ) && $(( _error_count++ )) || _json_output="{}"
+  # validate json schema
+  $( json.validate ${_json_output} ) && $(( _error_count++ )) || _json_output="{}"
 fi
 
   ## write status to json
   _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.exit_code |+= '${_exit_code})
 
-  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.enable |+= '${_filter} )
-
-  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.string |+= '${_filter_string} )
-
-  _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.filter.type |+= '${_filter_type} )
 
   _json=$( ${cmd_echo} ${_json}  | ${cmd_jq} '.status.args.path |+= '${_path} )
 
@@ -158,7 +92,7 @@ fi
   $( json.validate ${_json} ) && $(( _error_count++ ))  || _json="{}"
 fi
 
-  # det exit code
+  # set exit code
   [[ ${_error_count} == 0 ]] && exit_code = ${exitok}
   # output json and exit
   ${cmd_echo} ${_json}
