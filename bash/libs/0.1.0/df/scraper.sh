@@ -1,9 +1,9 @@
 #!/bin/bash
 
-_exitcrit=2
-_exitok=0
-_exitunkn=3
-_exitwarn=1
+local _exitcrit=2
+local _exitok=0
+local _exitunkn=3
+local _exitwarn=1
 
 local _count=0
 local _crit=${1}
