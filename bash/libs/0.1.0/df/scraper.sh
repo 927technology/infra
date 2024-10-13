@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# variables
 local _exitcrit=2
 local _exitok=0
 local _exitunkn=3
@@ -15,7 +16,8 @@ local _source=
 local _warn=${1}
 local _warn_count=0
 
-for line in $(df --output=source,pcent ); do
+# main
+for line in $( df --output=source,pcent ); do
   # scrape percent
   _percent=$( echo ${line} | awk '{print $2}' | sed 's/%//g' )
 
