@@ -25,6 +25,7 @@ for line in $( df --output=source,pcent ); do
   # scrape source
   _source=$( echo ${line} | awk '{print $1}' )
 
+  # concatenate exit string
   if [[ ${_percent} >= ${_crit} ]]; then
     $(( _crit_count++ ))
     _exit_string=+"(CRITICAL) ${_percent}% ${_source}"
@@ -50,5 +51,6 @@ else
   _exit_code=${_exitok}
 fi
 
+# exit
 echo ${_exit_string}
 exit ${_exit_code}
