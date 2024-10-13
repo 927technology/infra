@@ -24,11 +24,6 @@ for line in $( df --output=source,pcent ); do
   # scrape source
   _source=$( echo ${line} | awk '{print $1}' )
 
-  # add newline to exit string on all lines after the 1st
-  [[ ${_count} > 0 ]] && _exit_string=+"\n"
-
-  
-
   if [[ ${_percent} >= ${_crit} ]]; then
     $(( _crit_count++ ))
     _exit_string=+"(CRITICAL) ${_percent}% ${_source}"
@@ -37,7 +32,6 @@ for line in $( df --output=source,pcent ); do
     $(( _warn_count++ ))
     _exit_string=+"(WARNING) ${_percent}% ${_source}"
   fi
-  
 
   # add newline to exit string on all lines after the 1st
   [[ ${_count} > 0 ]] && _exit_string=+"\n"
