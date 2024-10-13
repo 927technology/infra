@@ -18,6 +18,7 @@ local _warn_count=0
 
 # main
 for line in $( df --output=source,pcent ); do
+ 
   # scrape percent
   _percent=$( echo ${line} | awk '{print $2}' | sed 's/%//g' )
 
